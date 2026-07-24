@@ -135,10 +135,10 @@ jobs:
             make test
           fi
         working-directory: provider-${{matrix.project}}-kafka
-  async-changes:
+  sync-changes:
     runs-on: ubuntu-latest
     outputs:
-      async-projects: ${{ steps.filter.outputs.changes }}
+      sync-projects: ${{ steps.filter.outputs.changes }}
     steps:
       - uses: actions/checkout@v7
       - uses: dorny/paths-filter@v4
@@ -150,11 +150,13 @@ jobs:
           filters: |
             rust:
               - '**-rust-kafka-sync/**'
+            dotnet:
+              - '**-dotnet-kafka-sync/**'
 
-  async-test:
+  sync-test:
     name: ${{matrix.project}}-${{matrix.os}}
-    if: ${{ needs.async-changes.outputs.async-projects != '[]' }}
-    needs: async-changes
+    if: ${{ needs.sync-changes.outputs.sync-projects != '[]' }}
+    needs: sync-changes
     strategy:
       matrix:
         os: 
@@ -162,7 +164,7 @@ jobs:
           - windows-latest
           - macos-15-intel
           - macos-15
-        project: ${{ fromJSON(needs.async-changes.outputs.async-projects) }}
+        project: ${{ fromJSON(needs.sync-changes.outputs.sync-projects) }}
         # project: [python]
         # project: [dotnet,go,java,js,python,rust]
       fail-fast: false
@@ -197,6 +199,27 @@ jobs:
         if: ${{ matrix.project == 'dotnet' }}
         with:
           dotnet-version: '8.x.x'
+      - name: setup pact-net beta
+        if: ${{ matrix.project == 'dotnet' }}
+        run: |
+          mkdir -p ./.nuget/local
+          curl -L -o ./.nuget/local/PactNet.5.1.0-beta.2.nupkg \
+            https://github.com/YOU54F/pact-net/releases/download/5.1.0-beta.2/PactNet.5.1.0-beta.2.nupkg
+          curl -L -o ./.nuget/local/PactNet.Abstractions.5.1.0-beta.2.nupkg \
+            https://github.com/YOU54F/pact-net/releases/download/5.1.0-beta.2/PactNet.Abstractions.5.1.0-beta.2.nupkg
+          curl -L -o ./.nuget/local/PactNet.Extensions.Grpc.5.1.0-beta.2.nupkg \
+            https://github.com/YOU54F/pact-net/releases/download/5.1.0-beta.2/PactNet.Extensions.Grpc.5.1.0-beta.2.nupkg
+          curl -L -o ./.nuget/local/PactNet.Output.Xunit.1.0.0.nupkg \
+            https://github.com/YOU54F/pact-net/releases/download/5.1.0-beta.2/PactNet.Output.Xunit.1.0.0.nupkg
+
+          dotnet add consumer-dotnet-kafka-sync/tests/tests.csproj package PactNet --version 5.1.0-beta.2 --source .nuget/local
+          dotnet add consumer-dotnet-kafka-sync/tests/tests.csproj package PactNet.Abstractions --version 5.1.0-beta.2 --source .nuget/local
+          dotnet add consumer-dotnet-kafka-sync/tests/tests.csproj package PactNet.Extensions.Grpc --version 5.1.0-beta.2 --source .nuget/local
+          dotnet add consumer-dotnet-kafka-sync/tests/tests.csproj package PactNet.Output.Xunit --version 1.0.0 --source .nuget/local
+          dotnet add provider-dotnet-kafka-sync/tests/tests.csproj package PactNet --version 5.1.0-beta.2 --source .nuget/local
+          dotnet add provider-dotnet-kafka-sync/tests/tests.csproj package PactNet.Abstractions --version 5.1.0-beta.2 --source .nuget/local
+          dotnet add provider-dotnet-kafka-sync/tests/tests.csproj package PactNet.Extensions.Grpc --version 5.1.0-beta.2 --source .nuget/local
+          dotnet add provider-dotnet-kafka-sync/tests/tests.csproj package PactNet.Output.Xunit --version 1.0.0 --source .nuget/local
       - uses: actions/setup-java@v5
         if: ${{ matrix.project == 'java' }}
         with:

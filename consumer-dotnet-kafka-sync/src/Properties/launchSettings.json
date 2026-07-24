@@ -1,0 +1,13 @@
+{
+    "profiles": {
+        "Development": {
+            "commandName": "Project",
+            "launchBrowser": true,
+            "launchUrl": "api/healthcheck",
+            "environmentVariables": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "ASPNETCORE_URLS": "http://localhost:8080/"
+            }
+        }
+    }
+}
