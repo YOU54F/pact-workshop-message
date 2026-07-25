@@ -68,10 +68,10 @@ pub fn product_event_processor(data: &web::Data<AppState>, payload: &[u8]) {
     }
 }
 
-fn product_event_reply_generator(productEvent: &ProductEvent) -> Vec<u8> {
+fn product_event_reply_generator(product_event: &ProductEvent) -> Vec<u8> {
     let response = serde_json::json!({
-        "event": productEvent.event,
-        "id": productEvent.id,
+        "event": product_event.event,
+        "id": product_event.id,
         "processed": true
     });
     serde_json::to_vec(&response).expect("Error serializing response")
@@ -99,12 +99,6 @@ async fn kafka_consumer(data: web::Data<AppState>) {
                     let product_event: ProductEvent =
                         serde_json::from_slice(payload).expect("Error deserializing product");
                     println!("incoming event {:?}",product_event);
-                    let product = Product {
-                        id: product_event.id.clone(),
-                        r#type: product_event.r#type.clone(),
-                        name: product_event.name.clone(),
-                        version: product_event.version.clone(),
-                    };
                     let reply_payload = product_event_reply_generator(&product_event);
                     // Publish the response to the reply topic
                     let producer: FutureProducer = ClientConfig::new()
