@@ -25,26 +25,20 @@ pub struct ProductEvent {
     version: String,
     event: String,
 }
+#[derive(Serialize, Deserialize)]
+pub struct ProductEventResponse {
+    id: String,
+    event: String,
+    processed: bool,
+}
 
-pub fn create_event(product: Product, event_type: &str) -> ProductEvent {
-    let version = increment_version(product.version);
-    ProductEvent {
+pub fn create_event(product: Product, event_type: &str) -> ProductEventResponse {
+    ProductEventResponse {
         id: product
             .id
             .unwrap_or_else(|| uuid::Uuid::new_v4().to_string()),
-        name: product.name,
-        r#type: product.r#type,
         event: event_type.to_string(),
-        version,
-    }
-}
-fn increment_version(version: Option<String>) -> String {
-    match version {
-        Some(v) => {
-            let num: u32 = v[1..].parse().unwrap();
-            format!("v{}", num + 1)
-        }
-        None => "v1".to_string(),
+        processed: true,
     }
 }
 
@@ -201,6 +195,7 @@ mod tests {
     use serde_json::Value;
     use std::{collections::HashMap, env, path::PathBuf, sync::Arc};
     use tokio::sync::oneshot;
+    use crate::ProductEvent;
     #[derive(Debug)]
     struct DummyProviderStateExecutor;
 
@@ -229,8 +224,10 @@ mod tests {
             println!("Incoming request path: {}", req.path());
             println!("Incoming request method: {}", req.method());
             println!("Incoming request body: {}", body);
+            println!("Incoming request contents: {}", body["request"]["contents"]["content"]);
             println!("Incoming request description: {}", body["description"]);
 
+            let request_contents : ProductEvent = serde_json::from_value(<Value as Clone>::clone(&body["request"]["contents"]["content"])).unwrap();            // println!("{}", request_contents);
             // Incoming request path: /pact-messages
             // Incoming request method: POST
             // Incoming request body: {"description":"a product event update with reply","request":{"contents":{"content":{"event":"UPDATED","id":"some-uuid-1234-5678","name":"Some Product","type":"Product Range","version":"v1"},"contentType":"application/json","encoded":false},"matchingRules":{"body":{"$.event":{"combine":"AND","matchers":[{"match":"regex","regex":"^(CREATED|UPDATED|DELETED)$"}]},"$.id":{"combine":"AND","matchers":[{"match":"type"}]},"$.name":{"combine":"AND","matchers":[{"match":"type"}]},"$.type":{"combine":"AND","matchers":[{"match":"type"}]},"$.version":{"combine":"AND","matchers":[{"match":"type"}]}},"metadata":{}},"metadata":{"kafka_reply_topic":"product_reply","kafka_request_topic":"product_request"}}}
@@ -241,13 +238,12 @@ mod tests {
             match body["description"].as_str() {
                 Some("a product event update with reply") => {
                     let product = Product {
-                        id: Some("some-uuid-1234-5678".to_string()),
-                        name: "Some Product".to_string(),
-                        r#type: "Product Range".to_string(),
-                        version: Some("v1".to_string()),
+                        id: Some(request_contents.id),
+                        name: request_contents.name,
+                        r#type: request_contents.r#type,
+                        version: Some(request_contents.version)
                     };
-                    let event_type = "UPDATED";
-                    let product_event = create_event(product, event_type);
+                    let product_event = create_event(product, &request_contents.event);
                     let mut response = HttpResponse::Ok().json(product_event);
                     let response_metadata = json!({
                       "kafka_reply_topic": "product_reply"

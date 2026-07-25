@@ -68,8 +68,13 @@ pub fn product_event_processor(data: &web::Data<AppState>, payload: &[u8]) {
     }
 }
 
-fn product_event_reply_generator(product: &Product) -> Vec<u8> {
-    serde_json::to_vec(product).expect("Error serializing product")
+fn product_event_reply_generator(productEvent: &ProductEvent) -> Vec<u8> {
+    let response = serde_json::json!({
+        "event": productEvent.event,
+        "id": productEvent.id,
+        "processed": true
+    });
+    serde_json::to_vec(&response).expect("Error serializing response")
 }
 
 async fn kafka_consumer(data: web::Data<AppState>) {
@@ -100,7 +105,7 @@ async fn kafka_consumer(data: web::Data<AppState>) {
                         name: product_event.name.clone(),
                         version: product_event.version.clone(),
                     };
-                    let reply_payload = product_event_reply_generator(&product);
+                    let reply_payload = product_event_reply_generator(&product_event);
                     // Publish the response to the reply topic
                     let producer: FutureProducer = ClientConfig::new()
                         .set("bootstrap.servers", "localhost:9092")
@@ -170,6 +175,7 @@ use maplit::hashmap;
 use std::sync::Mutex;
 use actix_web::web;
 use expectest::matchers::be_equal_to;
+use crate::ProductEvent;
 #[test]
 fn consumes_a_product_event_update_message_and_responds() {
     // Define the Pact for the test (you can setup multiple interactions by chaining the given or message_interaction calls)
@@ -221,9 +227,8 @@ fn consumes_a_product_event_update_message_and_responds() {
 
             let body = json_pattern!({
                 "id": like!("some-uuid-1234-5678"),
-                "type": like!("Product Range"),
-                "name": like!("Some Product"),
-                "version": like!("v1")
+                "event": matching_regex!("^(CREATED|UPDATED|DELETED)$","UPDATED"),
+                "processed": true
                 });
             let message_body = OptionalBody::Present(body.to_example().to_string().into(), Some("application/json".into()), None);
             let mut rules = MatchingRuleCategory::empty("content");
@@ -287,7 +292,8 @@ fn consumes_a_product_event_update_message_and_responds() {
         //     .to(be_some().value("product_reply"));
 
         // we should now call our event reply generator and ensure it can create the appropriate message
-        let actual_response: Value = serde_json::from_slice(&product_event_reply_generator(product)).unwrap();
+        let product_event: ProductEvent = serde_json::from_slice(&request_message_bytes).unwrap();
+        let actual_response: Value = serde_json::from_slice(&product_event_reply_generator(&product_event)).unwrap();
         let expected_response: Value = serde_json::from_slice(&response_message_bytes).unwrap();
         assert_eq!(expected_response, actual_response);
     }

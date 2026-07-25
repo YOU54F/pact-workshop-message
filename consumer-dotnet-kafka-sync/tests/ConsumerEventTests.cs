@@ -36,7 +36,7 @@ namespace Consumer.Tests
         }
 
         [Fact]
-        public void ProductEventHandler_ProductCreated_HandlesMessage()
+        public void ProductEventHandlers_ProductUpdate_HandlesSendAndReply()
         {
             this.pact
                       .ExpectsToReceive("a product event update")
@@ -44,7 +44,7 @@ namespace Consumer.Tests
                     //   .WithMetadata("kafka_topic", "products")
                       .WithRequestJsonContent(new
                       {
-                          id = Match.Type("some-uuid-1234-5678"),
+                          id = Match.Type("1"),
                           type = Match.Type("Product Range"),
                           name = Match.Type("Some Product"),
                           version = Match.Type("v1"),
@@ -54,20 +54,28 @@ namespace Consumer.Tests
                     // TODO: Ensure multiple responses are supported
                       .WithResponseJsonContent(new
                       {
-                          id = "some-uuid-1234-5678",
+                          id = "1",
                           @event = "UPDATED",
                           processed = true
                       })
                       .VerifyWithResponse<JsonElement, ProductEventProcessor.ProductEventResponse>(request =>
                       {
-                          var productEvent = new ProductEventProcessor.ProductEvent(
+                          var requestProduct = new Product(
                               ReadMatcherAwareString(request, "id"),
                               ReadMatcherAwareString(request, "type"),
                               ReadMatcherAwareString(request, "name"),
-                              ReadMatcherAwareString(request, "version"),
+                              ReadMatcherAwareString(request, "version"));
+
+                          var productEvent = consumer.BuildProductEvent(
+                              requestProduct,
                               ReadMatcherAwareString(request, "event"));
 
-                          return consumer.ProductEventHandler(productEvent);
+                          var providerResponse = new ProductEventProcessor.ProductEventResponse(
+                              productEvent.id,
+                              productEvent.Event,
+                              true);
+
+                          return consumer.HandleProductEventResponse(productEvent, providerResponse);
                       });
         }
 

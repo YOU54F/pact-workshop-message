@@ -30,7 +30,7 @@ jobs:
             rust:
               - '**-rust-kafka/**'
             dotnet:
-              - '**-dotnet-**/**'
+              - '**-dotnet-kafka/**'
             go:
               - '**-go-**/**'
             java:
@@ -211,15 +211,6 @@ jobs:
             https://github.com/YOU54F/pact-net/releases/download/5.1.0-beta.2/PactNet.Extensions.Grpc.5.1.0-beta.2.nupkg
           curl -L -o ./.nuget/local/PactNet.Output.Xunit.1.0.0.nupkg \
             https://github.com/YOU54F/pact-net/releases/download/5.1.0-beta.2/PactNet.Output.Xunit.1.0.0.nupkg
-
-          dotnet add consumer-dotnet-kafka-sync/tests/tests.csproj package PactNet --version 5.1.0-beta.2 --source .nuget/local
-          dotnet add consumer-dotnet-kafka-sync/tests/tests.csproj package PactNet.Abstractions --version 5.1.0-beta.2 --source .nuget/local
-          dotnet add consumer-dotnet-kafka-sync/tests/tests.csproj package PactNet.Extensions.Grpc --version 5.1.0-beta.2 --source .nuget/local
-          dotnet add consumer-dotnet-kafka-sync/tests/tests.csproj package PactNet.Output.Xunit --version 1.0.0 --source .nuget/local
-          dotnet add provider-dotnet-kafka-sync/tests/tests.csproj package PactNet --version 5.1.0-beta.2 --source .nuget/local
-          dotnet add provider-dotnet-kafka-sync/tests/tests.csproj package PactNet.Abstractions --version 5.1.0-beta.2 --source .nuget/local
-          dotnet add provider-dotnet-kafka-sync/tests/tests.csproj package PactNet.Extensions.Grpc --version 5.1.0-beta.2 --source .nuget/local
-          dotnet add provider-dotnet-kafka-sync/tests/tests.csproj package PactNet.Output.Xunit --version 1.0.0 --source .nuget/local
       - uses: actions/setup-java@v5
         if: ${{ matrix.project == 'java' }}
         with:

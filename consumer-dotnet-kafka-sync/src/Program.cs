@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
-using System.Threading.Tasks;
 
 namespace Products
 {
@@ -8,14 +7,7 @@ namespace Products
     {
         public static void Main(string[] args)
         {
-            var webHostTask = Task.Run(() => BuildWebHost(args).Run());
-            var kafkaConsumerTask = Task.Run(() => new KafkaConsumer(
-                "localhost:9092",
-                "pactflow-example-consumer-dotnet-kafka",
-                "products"
-            ).Start());
-
-            Task.WaitAll(webHostTask, kafkaConsumerTask);
+            BuildWebHost(args).Run();
         }
 
         public static IWebHost BuildWebHost(string[] args) =>
